@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processing Result</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% load static %}
+    <link href="{% static 'css/result.css' %}" rel="stylesheet">
+  
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>Image Processing Result</h2>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+
+                    <div class="col-md-6 text-center">
+                        <h3>Original Image</h3>
+                        {% if original_image %}
+                            <img src="{{ original_image }}" alt="Original Image">
+                        {% else %}
+                            <p>No original image available.</p>
+                        {% endif %}
+                    </div>
+    
+                    <div class="col-md-6 text-center">
+                        <h3>Undistorted Image</h3>
+                        {% if undistorted_image %}
+                            <img src="{{ undistorted_image }}" alt="Undistorted Image">
+                        {% else %}
+                            <p>No undistorted image available.</p>
+                        {% endif %}
+                    </div>
+                </div>
+    
+                <div class="row mt-4">
+                    <div class="col text-center">
+                        <h3>Generated Panorama Video</h3>
+                        {% if panorama_video_url %}
+                            <video controls>
+                                <source src="{{ panorama_video_url }}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        {% else %}
+                            <p>No panorama video generated.</p>
+                        {% endif %}
+                    </div>
+                </div>
+    
+                <div class="text-center mt-4">
+                    <a href="/" class="btn btn-primary">Upload Another Image</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+</body>
+</html>

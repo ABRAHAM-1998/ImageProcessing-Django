@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panorama Video Generator</title>
+</head>
+<body>
+    <h1>Panorama Video Generator</h1>
+    <form id="uploadForm" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="panorama_image">Upload Panorama Image:</label>
+        <input type="file" id="panorama_image" name="panorama_image" required>
+        <button type="submit">Generate Video</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        const form = document.getElementById("uploadForm");
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(form);
+            const response = await fetch("{% url 'generate_panorama_video' %}", {
+                method: "POST",
+                body: formData,
+            });
+            const data = await response.json();
+
+            const resultDiv = document.getElementById("result");
+            if (data.status === "success") {
+                resultDiv.innerHTML = `<p>Video generated! <a href="${data.video_url}" target="_blank">Download Video</a></p>`;
+            } else {
+                resultDiv.innerHTML = `<p>Error: ${data.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
