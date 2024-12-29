@@ -34,7 +34,7 @@ def cal_undistort(img, objpoints, imgpoints):
     return undist
 
 def upload_and_process_image(request):
-    
+
     if request.method == 'POST':
         form = ImageUploadForm(request.POST, request.FILES)
         if form.is_valid():
@@ -113,11 +113,13 @@ def panorama_to_plane(panorama_path, FOV, output_size, yaw, pitch):
 
 result =0
 def generate_panorama_video(request):
+    global result
+
     if request.method == "POST" and request.FILES.get("panorama_image"):
+        result =0   
 
         panorama_image = request.FILES["panorama_image"]
         panorama_path = os.path.join(settings.MEDIA_ROOT, "panorama_input.jpg")
-        global result
 
         with open(panorama_path, "wb") as f:
             for chunk in panorama_image.chunks():
@@ -139,6 +141,8 @@ def generate_panorama_video(request):
             progress = int((i + 1) / total_frames * 100)
             request.session['progress'] = progress 
             result = progress
+            if progress == 100:
+                result=0
 
 
         writer.close()
