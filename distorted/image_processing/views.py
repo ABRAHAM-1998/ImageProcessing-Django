@@ -112,50 +112,41 @@ def panorama_to_plane(panorama_path, FOV, output_size, yaw, pitch):
 
 
 result =0
-def generate_panorama_video(request):
+def generate_panorama_video(request, image_path=None):
     global result
 
-    if request.method == "POST" and request.FILES.get("panorama_image"):
-        result =0   
-
+    if image_path:
+        panorama_path = image_path
+    elif request.method == "POST" and request.FILES.get("panorama_image"):
         panorama_image = request.FILES["panorama_image"]
         panorama_path = os.path.join(settings.MEDIA_ROOT, "panorama_input.jpg")
-
         with open(panorama_path, "wb") as f:
             for chunk in panorama_image.chunks():
                 f.write(chunk)
-
-
-        output_video_path = os.path.join(settings.MEDIA_ROOT, "output_panorama.mp4")
-        writer = imageio.get_writer(output_video_path, fps=30, codec="libx264")
-
-        total_frames = len(np.arange(0, 360, 0.25))
-        i =0
-
-        for deg in tqdm(np.arange(0, 360, 0.25)):
-
-            output_image = panorama_to_plane(panorama_path, 90, (600, 600), deg, 90)
-            writer.append_data(np.array(output_image))
-
-            i+=1
-            progress = int((i + 1) / total_frames * 100)
-            request.session['progress'] = progress 
-            result = progress
-            if progress == 100:
-                result=0
-
-
-        writer.close()
-
-        return render(request, 'result.html', {
-
-            'original_image': settings.MEDIA_URL + "panorama_input.jpg",
-            'undistorted_image': None,  # Optional
-            'panorama_video_url': settings.MEDIA_URL + "output_panorama.mp4",
-
-        })
     else:
-        return render(request, 'upload.html', {'form': ImageUploadForm()})
+        return JsonResponse({'error': 'No panorama image provided.'}, status=400)
+
+    output_video_path = os.path.join(settings.MEDIA_ROOT, "output_panorama.mp4")
+    writer = imageio.get_writer(output_video_path, fps=30, codec="libx264")
+
+    total_frames = len(np.arange(0, 360, 0.25))
+    i = 0
+
+    for deg in tqdm(np.arange(0, 360, 0.25)):
+        output_image = panorama_to_plane(panorama_path, 120, (600, 600), deg, 90)
+        writer.append_data(np.array(output_image))
+
+        i += 1
+        progress = int((i + 1) / total_frames * 100)
+        request.session['progress'] = progress
+        result = progress
+        if progress == 100:
+            result = 0
+
+    writer.close()
+
+    return JsonResponse({'panorama_video_url': settings.MEDIA_URL + "output_panorama.mp4"})
+
 
 
 def get_progress(request):
@@ -163,3 +154,15 @@ def get_progress(request):
     progress = request.session.get('progress', 0)  
 
     return JsonResponse({'progress': result})
+
+
+def trigger_panorama_generation(request):
+    if request.method == 'POST':
+        undistorted_path = settings.MEDIA_ROOT / 'undistorted_image.png'
+        if not os.path.exists(undistorted_path):
+            return JsonResponse({'error': 'Undistorted image not found.'}, status=404)
+
+        response = generate_panorama_video(request, image_path=str(undistorted_path))
+        return response
+    return JsonResponse({'error': 'Invalid request method.'}, status=400)
+
