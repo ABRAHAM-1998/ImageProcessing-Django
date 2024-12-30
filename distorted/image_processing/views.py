@@ -115,37 +115,60 @@ result =0
 def generate_panorama_video(request, image_path=None):
     global result
 
-    if image_path:
-        panorama_path = image_path
-    elif request.method == "POST" and request.FILES.get("panorama_image"):
-        panorama_image = request.FILES["panorama_image"]
-        panorama_path = os.path.join(settings.MEDIA_ROOT, "panorama_input.jpg")
-        with open(panorama_path, "wb") as f:
-            for chunk in panorama_image.chunks():
-                f.write(chunk)
-    else:
-        return JsonResponse({'error': 'No panorama image provided.'}, status=400)
+    try:
 
-    output_video_path = os.path.join(settings.MEDIA_ROOT, "output_panorama.mp4")
-    writer = imageio.get_writer(output_video_path, fps=30, codec="libx264")
+        if image_path:
+            panorama_path = image_path
+        elif request.method == "POST" and request.FILES.get("panorama_image"):
+            panorama_image = request.FILES["panorama_image"]
+            panorama_path = os.path.join(settings.MEDIA_ROOT, "panorama_input.jpg")
+            
 
-    total_frames = len(np.arange(0, 360, 0.25))
-    i = 0
+            with open(panorama_path, "wb") as f:
+                for chunk in panorama_image.chunks():
+                    f.write(chunk)
+        else:
+            return render(request, 'upload.html', {'error': 'No panorama image provided.'})
 
-    for deg in tqdm(np.arange(0, 360, 0.25)):
-        output_image = panorama_to_plane(panorama_path, 120, (600, 600), deg, 90)
-        writer.append_data(np.array(output_image))
 
-        i += 1
-        progress = int((i + 1) / total_frames * 100)
-        request.session['progress'] = progress
-        result = progress
-        if progress == 100:
-            result = 0
+        output_video_path = os.path.join(settings.MEDIA_ROOT, "output_panorama.mp4")
+        writer = imageio.get_writer(output_video_path, fps=30, codec="libx264")
 
-    writer.close()
+        total_frames = len(np.arange(0, 360, 0.75))
+            # ADJUST (0, 360, .75) => .75 VALUE TO SPEED OF VIDEO GENERATION AND SPEED OF VIDEO PLAY
 
-    return JsonResponse({'panorama_video_url': settings.MEDIA_URL + "output_panorama.mp4"})
+        for i, deg in enumerate(np.arange(0, 360, .75)):
+            # ADJUST (0, 360, .75) => .75 VALUE TO SPEED OF VIDEO GENERATION AND SPEED OF VIDEO PLAY
+
+            frame = np.array(panorama_to_plane(panorama_path, 120, (600, 600), deg, 90))
+            # ADJUST (panorama_path, 120, (600, 600), deg, 90) => "120" TO INCREASE OR DECREASE DEPTH OF VIEW (FOV)
+            writer.append_data(frame)
+
+            progress = int((i + 1) / total_frames * 100)
+            request.session['progress'] = progress  
+            request.session.modified = True  
+            result = progress
+            if progress == 100:
+                request.session['progress'] = 0  
+                result = 0
+
+
+        writer.close()
+
+        if image_path :
+            return JsonResponse({'panorama_video_url': settings.MEDIA_URL + "output_panorama.mp4"})
+
+
+        return render(request, 'result.html', {
+            'original_image': settings.MEDIA_URL + "panorama_input.jpg",
+            'undistorted_image': None,  
+            'panorama_video_url': settings.MEDIA_URL + "output_panorama.mp4",
+        })
+
+    except Exception as e:
+        print(f"Error generating panorama video: {e}")
+
+        return render(request, 'upload.html', {'error': 'Failed to generate panorama video. Please try again.'})
 
 
 
